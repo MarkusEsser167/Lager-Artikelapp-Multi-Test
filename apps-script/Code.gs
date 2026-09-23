@@ -18,35 +18,45 @@
  * Stift -> NEUE VERSION -> Bereitstellen (sonst läuft weiterhin der alte Code).
  */
 function doPost(e) {
-  const data = JSON.parse(e.postData.contents);
+  try {
+    const data = JSON.parse(e.postData.contents);
 
-  const attachments = [];
-  if (data.file_base64) {
-    attachments.push(Utilities.newBlob(
-      Utilities.base64Decode(data.file_base64),
-      data.mime_type || 'application/octet-stream',
-      data.filename
-    ));
-  }
-  (data.extra_attachments || []).forEach((att) => {
-    attachments.push(Utilities.newBlob(
-      Utilities.base64Decode(att.base64),
-      att.mime_type || 'application/octet-stream',
-      att.filename
-    ));
-  });
-
-  GmailApp.sendEmail(
-    data.to,
-    data.subject,
-    data.message || '',
-    {
-      attachments: attachments,
-      name: 'WeGo VTI Lagermeldungen',
+    const attachments = [];
+    if (data.file_base64) {
+      attachments.push(Utilities.newBlob(
+        Utilities.base64Decode(data.file_base64),
+        data.mime_type || 'application/octet-stream',
+        data.filename
+      ));
     }
-  );
+    (data.extra_attachments || []).forEach((att) => {
+      attachments.push(Utilities.newBlob(
+        Utilities.base64Decode(att.base64),
+        att.mime_type || 'application/octet-stream',
+        att.filename
+      ));
+    });
 
-  return ContentService
-    .createTextOutput(JSON.stringify({ status: 'ok' }))
-    .setMimeType(ContentService.MimeType.JSON);
+    // Optionen-Objekt nur mit den Feldern bauen, die tatsächlich gebraucht werden -
+    // "attachments: []" (leeres Array, z.B. bei der Fehlbestandsmeldung ohne Anhang) wird
+    // bewusst weggelassen statt explizit mitgeschickt, um diesen Fall als möglichen
+    // Fehlerkandidaten auszuschließen.
+    const options = { name: 'WeGo VTI Lagermeldungen' };
+    if (attachments.length) options.attachments = attachments;
+
+    GmailApp.sendEmail(data.to, data.subject, data.message || '', options);
+
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'ok' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    // Landet in den "Ausführungen" im Apps-Script-Editor (Protokolle-Tab) - wichtig, um
+    // Fehler wie "Service invoked too many times for one day: email" (Gmail-Tagesquote,
+    // z.B. 100 Mails/Tag bei einem normalen Gmail-Konto, gemeinsam genutzt von allen
+    // Standort-Apps) oder ungültige Empfängeradressen zu erkennen.
+    Logger.log('doPost-Fehler: ' + err.message + '\n' + err.stack);
+    return ContentService
+      .createTextOutput(JSON.stringify({ status: 'error', message: err.message }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
