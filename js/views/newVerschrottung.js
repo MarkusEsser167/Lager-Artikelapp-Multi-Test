@@ -112,7 +112,8 @@ export async function renderNewVerschrottung(container, router) {
   const MAX_PHOTOS = 4;
   const photoWrap = document.createElement('div');
   photoWrap.className = 'field photo-field';
-  photoWrap.innerHTML = `<label class="field-label">Fotos (optional, bis zu ${MAX_PHOTOS})</label>`;
+  photoWrap.innerHTML = `<label class="field-label">Fotos * (mindestens 1, bis zu ${MAX_PHOTOS})</label>
+    <div class="notice-box" style="margin-bottom:0">📷 <strong>Pflichtfoto:</strong> Bitte mindestens ein Foto des zu verschrottenden Artikels bzw. des Schadens aufnehmen. Ohne Foto kann die Meldung nicht gesendet werden.</div>`;
   const photoBtn = document.createElement('button');
   photoBtn.type = 'button';
   photoBtn.className = 'btn btn-ghost';
@@ -175,6 +176,11 @@ export async function renderNewVerschrottung(container, router) {
     if (selectedGrund === 'Sonstiges' && !sonstiges.input.value.trim()) {
       alert('Bitte den Grund im Freitext angeben.');
       sonstiges.input.focus();
+      return;
+    }
+    if (photos.length < 1) {
+      alert('Bitte mindestens ein Foto aufnehmen (Pflichtfoto).');
+      photoWrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     if (!melder.input.value) {

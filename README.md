@@ -47,7 +47,7 @@ Geräte-/Komfort-Einstellung ohne Anmeldung dahinter**:
 - **Lagerplatzänderung melden** – Artikelnummer, Art (**Hauptlagerplatz** oder
   **Referenzlagerplatz**, Pflichtauswahl), neuer Lagerplatz, Bemerkung. Wird beim Absenden sofort
   als Excel-Datei an die zentrale Mailadresse des gewählten Standorts gemailt.
-- **Verschrottung melden** – Artikelnummer, Menge, Grund, bis zu 4 Fotos, Bemerkung. Wird beim
+- **Verschrottung melden** – Artikelnummer, Menge, Grund, mindestens 1 Pflichtfoto (bis zu 4 Fotos), Bemerkung. Wird beim
   Absenden sofort als PDF (mit allen Fotos eingebettet) an die Verschrottungs-Mailadresse(n) des
   gewählten Standorts gemailt.
 - **Massen-Lagerplatzkorrektur** – zur Inventurvorbereitung: Artikel scannen, aktuellen
