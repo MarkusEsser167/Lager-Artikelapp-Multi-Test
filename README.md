@@ -66,6 +66,9 @@ Geräte-/Komfort-Einstellung ohne Anmeldung dahinter**:
   ergänzen. Versand als Excel an die zentrale Mailadresse des Standorts. Gedacht für Kamera-Tablets wie
   das Zebra ET45; die Erkennung ist weniger robust als Zebras KI-Barcode-Modell (nur in nativen
   Android-Apps nutzbar), daher zuerst als Test.
+  Zusätzlich wird – nur für Artikel, die laut System nicht auf diesem Lagerplatz stehen – eine zweite Excel-Datei im
+  Format der Massen-Lagerplatzkorrektur (`MATNR`, `WERKS`, `LGORT`, `LGPBE`) mit dem erfassten Lagerplatz als neuem
+  Hauptlagerplatz angehängt.
 - **Fehlbestand melden** – nur Artikelnummer (+ optionale Bemerkung), ohne Lagerplatz oder Menge.
   Wird als einfache Text-Mail (kein Anhang) an die zentrale Mailadresse des Standorts gemailt.
 - Volltextsuche über mehrere Suchbegriffe (Artikelnummer/Lagerplatz), Barcode-/QR-Scan über die

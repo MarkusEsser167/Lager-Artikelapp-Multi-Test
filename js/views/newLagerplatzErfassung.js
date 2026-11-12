@@ -186,6 +186,11 @@ export async function renderNewLagerplatzErfassung(container, router) {
   });
   listSection.appendChild(manual.wrap);
 
+  // Hinweis, welche Artikel in die SAP-Massenänderungsdatei (2. Mailanhang) kommen.
+  const changeInfo = document.createElement('div');
+  changeInfo.className = 'notice-box';
+  container.appendChild(changeInfo);
+
   const actionBar = document.createElement('div');
   actionBar.className = 'action-bar';
   const sendBtn = document.createElement('button');
@@ -249,6 +254,11 @@ export async function renderNewLagerplatzErfassung(container, router) {
       row.appendChild(actions);
       list.appendChild(row);
     });
+    const nAend = items.filter((i) => abgleich(i, platz).key === 'abweichend').length;
+    changeInfo.style.display = items.length ? 'block' : 'none';
+    changeInfo.innerHTML = nAend
+      ? `📎 <strong>${nAend} Artikel</strong> stehen laut System woanders. Für sie wird zusätzlich eine <strong>SAP-Massenänderungs-Datei</strong> (neuer Hauptlagerplatz ${escapeHtml(platz || '–')}) angehängt.`
+      : 'Kein Artikel weicht vom System ab – es wird nur der Erfassungsbericht gesendet.';
     sendBtn.textContent = items.length ? `📤 ${items.length} Artikel für Lagerplatz senden` : 'Noch nichts erfasst';
     sendBtn.disabled = !items.length;
   }
