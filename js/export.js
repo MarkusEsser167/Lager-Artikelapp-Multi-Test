@@ -169,6 +169,47 @@ export async function sendLagerplatzkorrekturBatch(meldungen) {
   return { method: 'download' };
 }
 
+// Massenerfassung pro Lagerplatz: eine Excel-Datei mit einer Zeile je erfasstem Artikel/Code
+// (Lagerplatz, Artikelnummer, Bezeichnung, EAN/Code, Abgleich mit dem System) an die zentrale
+// Adresse des Standorts. Unbekannte Codes werden mit aufgeführt, damit nichts verloren geht.
+export async function sendLagerplatzerfassung(m) {
+  const standort = await requireStandort();
+  const wb = window.XLSX.utils.book_new();
+  const rows = (m.items || []).map((i) => ({
+    Datum: formatDate(m.createdAt),
+    Standort: standort.name,
+    Lagerplatz: m.lagerplatz || '',
+    Artikelnummer: i.nummer || '',
+    Artikelbezeichnung: i.bezeichnung || '',
+    'EAN / gescannter Code': i.ean || i.code || '',
+    'Lagerplatz laut System': (i.abgleich && i.abgleich.system) || '',
+    Abgleich: (i.abgleich && i.abgleich.text) || '',
+    'Gemeldet von': m.melder || '',
+  }));
+  const ws = window.XLSX.utils.json_to_sheet(rows);
+  window.XLSX.utils.book_append_sheet(wb, ws, 'Lagerplatz-Erfassung');
+  const arrayBuffer = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  const blob = new Blob([arrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+  const safePlatz = (m.lagerplatz || 'lagerplatz').replace(/[^a-zA-Z0-9_-]+/g, '_');
+  const filename = `Lagerplatz-Erfassung_${safePlatz}_${m.id}.xlsx`;
+  const n = rows.length;
+  const abweichend = (m.items || []).filter((i) => i.abgleich && (i.abgleich.key === 'abweichend' || i.abgleich.key === 'unbekannt')).length;
+  const subject = `Lagerplatz-Erfassung ${m.lagerplatz || ''} – ${n} Artikel`;
+  const message = `Lagerplatz-Erfassung von ${m.melder || '–'}.\nLagerplatz: ${m.lagerplatz || '–'}\nErfasste Artikel: ${n}${abweichend ? `\nDavon abweichend/unbekannt: ${abweichend}` : ''}\nHinweis: Es wird erfasst, welche Artikel auf dem Platz stehen, nicht die Menge.`;
+
+  if (MAIL_SCRIPT_URL) {
+    try {
+      await sendViaScript({ to: standort.zentraleMail, subject, message, filename, mimeType: blob.type, arrayBuffer });
+      return { method: 'auto' };
+    } catch (err) {
+      console.warn('Automatischer Mailversand fehlgeschlagen, Fallback auf Download+mailto:', err.message);
+    }
+  }
+  fallbackDownloadAndMail({ blob, filename, to: standort.zentraleMail, subject, message });
+  return { method: 'download' };
+}
+
 // Einfache Text-Mail ohne Anhang – kein Excel/PDF nötig, daher auch kein Download-Fallback
 // (nur mailto), da es keine Datei zum manuellen Anhängen gibt.
 export async function sendFehlbestandMeldung(m) {

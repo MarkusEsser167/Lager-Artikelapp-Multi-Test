@@ -56,6 +56,16 @@ Geräte-/Komfort-Einstellung ohne Anmeldung dahinter**:
   „Lagerplatzänderung melden“ erfasst werden. Mehrere Korrekturen werden gesammelt und gemeinsam
   als eine Excel-Datei gesendet – im festen SAP-Massenupload-Format `MATNR`/`WERKS`/`LGORT`/
   `LGPBE`, `WERKS`/`LGORT` aus der Standortliste.
+- **Lagerplatz-Erfassung (Kamera)** *(nur in dieser Test-App)* – Massenerfassung pro Lagerplatz: Lagerplatz
+  wählen, dann die Kamera über die Ware halten; alle gleichzeitig sichtbaren Barcodes (EAN oder
+  Artikelnummer) werden fortlaufend erfasst (`js/massScan.js`, nutzt `BarcodeDetector`, der mehrere
+  Codes je Bild liefert). Ein Code zählt erst nach zwei Erkennungen (filtert Fehllesungen). Ergebnis ist
+  eine Liste der Artikel auf dem Platz – **keine Mengen**, derselbe Artikel nur einmal – mit Abgleich
+  gegen `artikel-lagerplatz.xlsx` (passt / abweichend / ohne Referenz / unbekannter Code). Mehrdeutige
+  EANs bieten eine Auswahl, Lagerplatz-Etiketten im Bild werden ignoriert, Artikel lassen sich manuell
+  ergänzen. Versand als Excel an die zentrale Mailadresse des Standorts. Gedacht für Kamera-Tablets wie
+  das Zebra ET45; die Erkennung ist weniger robust als Zebras KI-Barcode-Modell (nur in nativen
+  Android-Apps nutzbar), daher zuerst als Test.
 - **Fehlbestand melden** – nur Artikelnummer (+ optionale Bemerkung), ohne Lagerplatz oder Menge.
   Wird als einfache Text-Mail (kein Anhang) an die zentrale Mailadresse des Standorts gemailt.
 - Volltextsuche über mehrere Suchbegriffe (Artikelnummer/Lagerplatz), Barcode-/QR-Scan über die

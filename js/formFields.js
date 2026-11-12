@@ -2,7 +2,7 @@ import { scanBarcode, isScanSupported } from './barcode.js';
 
 // EAN/GTIN vergleichbar machen: nur Ziffern, ohne führende Nullen (ein EAN-13 kann je nach
 // Scanner/Quelle als 12-, 13- oder 14-stellig mit Nullen aufgefüllt ankommen).
-function normEan(s) {
+export function normEan(s) {
   return String(s || '').replace(/\D/g, '').replace(/^0+/, '');
 }
 // Ein Suchbegriff gilt nur dann als EAN-Suche, wenn er rein numerisch und mind. 6-stellig ist –
