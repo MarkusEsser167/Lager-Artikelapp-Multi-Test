@@ -1,9 +1,26 @@
 import { scanBarcode, isScanSupported } from './barcode.js';
 
+// EAN/GTIN vergleichbar machen: nur Ziffern, ohne führende Nullen (ein EAN-13 kann je nach
+// Scanner/Quelle als 12-, 13- oder 14-stellig mit Nullen aufgefüllt ankommen).
+function normEan(s) {
+  return String(s || '').replace(/\D/g, '').replace(/^0+/, '');
+}
+// Ein Suchbegriff gilt nur dann als EAN-Suche, wenn er rein numerisch und mind. 6-stellig ist –
+// sonst würden kurze Zahlen wie "20" (z.B. "20 mm") ständig zufällig in EANs treffen.
+function isEanTerm(t) {
+  return /^\d{6,}$/.test(t);
+}
+
 // Baut ein Textfeld mit Scan-Button (Barcode/QR über Kamera) und optional einer
 // Trefferliste aus einer hinterlegten Vorgabeliste (Artikel-/Lagerplatzliste), die
 // beim Tippen oder nach einem Scan gefiltert wird. onSelect wird bei einem Treffer
 // aufgerufen (z.B. um die Artikelbezeichnung automatisch mit einzutragen).
+// Normalisierte EAN eines Eintrags (zwischengespeichert am Objekt; leer, wenn keine hinterlegt).
+function eanOf(it) {
+  if (it.eanN === undefined) it.eanN = normEan(it.ean);
+  return it.eanN;
+}
+
 export function scanField({ id, label, placeholder = '', items = null, valueKey, labelKey, onSelect }) {
   const wrap = document.createElement('div');
   wrap.className = 'field';
@@ -31,19 +48,24 @@ export function scanField({ id, label, placeholder = '', items = null, valueKey,
       if (q.length < 2) return;
       // Volltextsuche über mehrere Wörter: jedes eingegebene Wort muss irgendwo in
       // Nummer + Bezeichnung vorkommen (Reihenfolge egal), z.B. "schraube m8" findet
-      // "Sechskantschraube M8x40" ebenso wie "M8 Schraube verzinkt".
+      // "Sechskantschraube M8x40" ebenso wie "M8 Schraube verzinkt". Lange Zahlenfolgen
+      // (ab 6 Ziffern) werden zusätzlich gegen die EAN des Artikels geprüft.
       const terms = q.split(/\s+/).filter(Boolean);
+      const eanOnly = (it, t) => isEanTerm(t) && eanOf(it).includes(normEan(t));
       const matches = items
         .filter((it) => {
           const haystack = `${it[valueKey]} ${it[labelKey] || ''}`.toLowerCase();
-          return terms.every((t) => haystack.includes(t));
+          return terms.every((t) => haystack.includes(t) || eanOnly(it, t));
         })
         .slice(0, 8);
       matches.forEach((m) => {
         const row = document.createElement('button');
         row.type = 'button';
         row.className = 'lookup-result-row';
-        row.textContent = m[labelKey] ? `${m[valueKey]} – ${m[labelKey]}` : m[valueKey];
+        const text = m[labelKey] ? `${m[valueKey]} – ${m[labelKey]}` : m[valueKey];
+        // Wurde über die EAN gefunden, die EAN im Treffer mit anzeigen (sonst wäre unklar, warum er passt).
+        const viaEan = m.ean && terms.some((t) => isEanTerm(t) && eanOf(m).includes(normEan(t)));
+        row.textContent = viaEan ? `${text} · EAN ${m.ean}` : text;
         row.addEventListener('mousedown', (e) => e.preventDefault()); // Klick vor Blur behalten
         row.addEventListener('click', () => {
           input.value = m[valueKey];
@@ -63,9 +85,37 @@ export function scanField({ id, label, placeholder = '', items = null, valueKey,
     input.addEventListener('blur', () => setTimeout(() => { resultsBox.innerHTML = ''; }, 150));
 
     const findExact = (value) => items.find((it) => it[valueKey].toLowerCase() === value.trim().toLowerCase());
+    // Index EAN -> Artikel (einmalig aufgebaut, nur wenn die Liste überhaupt EANs enthält).
+    let eanIndex = null;
+    const findByEan = (value) => {
+      const n = normEan(value);
+      if (n.length < 6) return [];
+      if (!eanIndex) {
+        eanIndex = new Map();
+        items.forEach((it) => {
+          const e = eanOf(it);
+          if (!e) return;
+          if (!eanIndex.has(e)) eanIndex.set(e, []);
+          eanIndex.get(e).push(it);
+        });
+      }
+      return eanIndex.get(n) || [];
+    };
     input.addEventListener('change', () => {
       const match = findExact(input.value);
-      if (match && onSelect) onSelect(match);
+      if (match) {
+        if (onSelect) onSelect(match);
+        return;
+      }
+      // Gescannte/eingegebene EAN: eindeutiger Treffer wird direkt als Artikel übernommen,
+      // bei mehreren Artikeln mit derselben EAN wird die Trefferliste zur Auswahl gezeigt.
+      const byEan = findByEan(input.value);
+      if (byEan.length === 1) {
+        input.value = byEan[0][valueKey];
+        if (onSelect) onSelect(byEan[0]);
+      } else if (byEan.length > 1) {
+        showResults(input.value);
+      }
     });
   }
 

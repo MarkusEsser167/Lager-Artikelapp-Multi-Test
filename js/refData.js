@@ -19,6 +19,8 @@ const ARTIKEL_ALIASES = {
     'materialkurztext', 'materialkurztext 2', 'materialkurztext 3',
     'artikelkurztext', 'artikelkurztext 2', 'artikelkurztext 3',
   ],
+  // Optionale EAN-/GTIN-Spalte: wird in der Artikelsuche und beim Scannen mitberücksichtigt.
+  ean: ['ean', 'ean11', 'ean-code', 'eancode', 'gtin'],
 };
 const LAGERPLATZ_ALIASES = {
   code: ['lagerplatz', 'platz', 'code', 'lagerplatz-code', 'lagerplatzcode'],
@@ -33,6 +35,7 @@ const ARTIKEL_LAGERPLATZ_ALIASES = {
   bezeichnung: ARTIKEL_ALIASES.bezeichnung,
   lagerplatz: LAGERPLATZ_ALIASES.code,
   hauptlagerplatz: ['kz hlp', 'hlp', 'hauptlagerplatz'],
+  ean: ARTIKEL_ALIASES.ean,
 };
 // Bewusst kuratierte Teilmenge NUR für den Teilstring-Fallback (siehe parseSheet): erkennt
 // Kopfzeilen wie "FIS/wms®  Lagerplatz", die "Lagerplatz" nicht exakt, aber als Wortteil
@@ -129,7 +132,7 @@ function groupArtikelLagerplatz(rows) {
   const byNummer = new Map();
   for (const row of rows) {
     if (!byNummer.has(row.nummer)) {
-      byNummer.set(row.nummer, { bezeichnung: row.bezeichnung, locations: [] });
+      byNummer.set(row.nummer, { bezeichnung: row.bezeichnung, ean: row.ean || '', locations: [] });
       order.push(row.nummer);
     }
     const entry = byNummer.get(row.nummer);
@@ -137,11 +140,11 @@ function groupArtikelLagerplatz(rows) {
     if (row.lagerplatz) entry.locations.push({ code: row.lagerplatz, haupt: row.hauptlagerplatz === 'X' });
   }
   return order.map((nummer) => {
-    const { bezeichnung, locations } = byNummer.get(nummer);
+    const { bezeichnung, ean, locations } = byNummer.get(nummer);
     const sorted = [...locations].sort((a, b) => Number(b.haupt) - Number(a.haupt));
     const lagerplatz =
       sorted.length > 1 ? sorted.map((l) => (l.haupt ? `${l.code} (Haupt)` : l.code)).join(', ') : sorted[0]?.code || '';
-    return { nummer, bezeichnung, lagerplatz };
+    return { nummer, bezeichnung, ean, lagerplatz };
   });
 }
 
@@ -207,6 +210,15 @@ export function loadArtikelLagerplatzListe() {
   if (!artikelLagerplatzPromiseBySite.has(site)) {
     artikelLagerplatzPromiseBySite.set(site, fetchWorkbook(standortUrl('artikel-lagerplatz.xlsx'))
       .then((wb) => groupArtikelLagerplatz(parseSheet(wb, ARTIKEL_LAGERPLATZ_ALIASES, LOOSE_ALIASES)))
+      // EAN aus der (großen) Artikelliste nachtragen, falls die Referenzliste selbst keine hat –
+      // damit auch die Massen-Lagerplatzkorrektur per EAN suchen/scannen kann.
+      .then(async (liste) => {
+        if (liste.some((a) => a.ean)) return liste;
+        const stamm = await loadArtikelListe();
+        const eanByNummer = new Map(stamm.filter((a) => a.ean).map((a) => [a.nummer, a.ean]));
+        liste.forEach((a) => { a.ean = eanByNummer.get(a.nummer) || ''; });
+        return liste;
+      })
       .catch((err) => {
         console.warn('Artikel-Lagerplatz-Referenzliste konnte nicht geladen werden:', err.message);
         return [];
