@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lager-meldung-multi-test-v6';
+const CACHE_NAME = 'lager-meldung-multi-test-v7';
 const PRECACHE = [
   './',
   './index.html',

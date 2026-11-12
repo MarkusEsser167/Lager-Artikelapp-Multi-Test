@@ -69,6 +69,9 @@ Geräte-/Komfort-Einstellung ohne Anmeldung dahinter**:
   Zusätzlich wird – nur für Artikel, die laut System nicht auf diesem Lagerplatz stehen – eine zweite Excel-Datei im
   Format der Massen-Lagerplatzkorrektur (`MATNR`, `WERKS`, `LGORT`, `LGPBE`) mit dem erfassten Lagerplatz als neuem
   Hauptlagerplatz angehängt.
+  Ist der erfasste Lagerplatz für einen Artikel bereits als **Referenzlagerplatz** eingetragen, warnt die App
+  (rot im Kamerabild + Vibration, Hinweis in Liste und Mail); solche Artikel kommen nicht in die SAP-Datei,
+  da die Massenänderung nur Hauptlagerplätze setzen kann.
 - **Fehlbestand melden** – nur Artikelnummer (+ optionale Bemerkung), ohne Lagerplatz oder Menge.
   Wird als einfache Text-Mail (kein Anhang) an die zentrale Mailadresse des Standorts gemailt.
 - Volltextsuche über mehrere Suchbegriffe (Artikelnummer/Lagerplatz), Barcode-/QR-Scan über die

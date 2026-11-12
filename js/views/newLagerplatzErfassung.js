@@ -115,14 +115,34 @@ export async function renderNewLagerplatzErfassung(container, router) {
   }
 
   // Vergleich mit der Referenzliste (welcher Artikel steht laut System auf welchem Lagerplatz).
-  function abgleich(item, platz) {
-    if (!item.nummer) return { key: 'unbekannt', text: 'Code nicht in Artikelliste' };
-    const ref = systemByNummer.get(item.nummer);
+  // Ergebnis-Schlüssel: ok | referenz | abweichend | ohne | unbekannt.
+  // "referenz": Der erfasste Platz ist für den Artikel bereits als REFERENZlagerplatz (nicht als
+  // Hauptlagerplatz) eingetragen. Die SAP-Massenänderung kann nur Hauptlagerplätze setzen – solche
+  // Artikel werden deshalb gewarnt und nicht in die SAP-Datei übernommen.
+  function abgleichNummer(nummer, platz) {
+    if (!nummer) return { key: 'unbekannt', text: 'Code nicht in Artikelliste' };
+    const ref = systemByNummer.get(nummer);
     if (!ref || !ref.lagerplatz) return { key: 'ohne', text: 'Kein Lagerplatz im System hinterlegt' };
-    const plaetze = ref.lagerplatz.split(',').map((p) => p.replace(/\s*\(Haupt\)\s*$/, '').trim().toLowerCase());
-    return plaetze.includes(platz.trim().toLowerCase())
-      ? { key: 'ok', text: 'Laut System auf diesem Lagerplatz', system: ref.lagerplatz }
-      : { key: 'abweichend', text: `Laut System auf: ${ref.lagerplatz}`, system: ref.lagerplatz };
+    const locs = ref.locations && ref.locations.length
+      ? ref.locations
+      : ref.lagerplatz.split(',').map((p) => ({ code: p.replace(/\s*\(Haupt\)\s*$/, '').trim(), haupt: /\(Haupt\)/.test(p) }));
+    const ziel = platz.trim().toLowerCase();
+    const treffer = locs.find((l) => String(l.code).trim().toLowerCase() === ziel);
+    if (!treffer) return { key: 'abweichend', text: `Laut System auf: ${ref.lagerplatz}`, system: ref.lagerplatz };
+    // Nur bei mehreren Plätzen MIT Haupt-Kennzeichen lässt sich Referenz sicher von Haupt unterscheiden
+    // (ein einzelner Platz gilt als Hauptlagerplatz, auch ohne Kennzeichen).
+    const hauptPlatz = locs.find((l) => l.haupt);
+    if (!treffer.haupt && locs.length > 1 && hauptPlatz) {
+      return {
+        key: 'referenz',
+        text: `⚠️ Lagerplatz ist bereits als Referenzlagerplatz eingetragen – Hauptlagerplatz laut System: ${hauptPlatz.code}. Per Massenänderung nicht änderbar.`,
+        system: ref.lagerplatz,
+      };
+    }
+    return { key: 'ok', text: 'Laut System auf diesem Lagerplatz (Hauptlagerplatz)', system: ref.lagerplatz };
+  }
+  function abgleich(item, platz) {
+    return abgleichNummer(item.nummer, platz);
   }
 
   // ---- UI: Kamera + Liste ----
@@ -153,7 +173,15 @@ export async function renderNewLagerplatzErfassung(container, router) {
       initial: items.map((i) => i.code),
       lookup: (raw) => {
         const k = resolveCode(raw);
-        return k.length ? { known: true, label: `${k[0].nummer} – ${k[0].bezeichnung}` } : null;
+        if (!k.length) return null;
+        const ab = abgleichNummer(k[0].nummer, lagerplatz.input.value);
+        const warn = ab.key === 'referenz';
+        return {
+          known: true,
+          warn,
+          short: k[0].nummer,
+          label: `${warn ? '⚠️ REFERENZLAGERPLATZ – ' : ''}${k[0].nummer} – ${k[0].bezeichnung}`,
+        };
       },
       onCapture: (raw) => addByCode(raw),
     });
@@ -190,6 +218,10 @@ export async function renderNewLagerplatzErfassung(container, router) {
   const changeInfo = document.createElement('div');
   changeInfo.className = 'notice-box';
   container.appendChild(changeInfo);
+  // Warnung für Artikel, bei denen der Platz schon Referenzlagerplatz ist (nicht änderbar).
+  const refWarn = document.createElement('div');
+  refWarn.className = 'error-box';
+  container.appendChild(refWarn);
 
   const actionBar = document.createElement('div');
   actionBar.className = 'action-bar';
@@ -211,12 +243,12 @@ export async function renderNewLagerplatzErfassung(container, router) {
     items.forEach((item, idx) => {
       const ab = abgleich(item, platz);
       const row = document.createElement('div');
-      row.className = 'protocol-card';
+      row.className = 'protocol-card' + (ab.key === 'referenz' ? ' row-warn' : '');
       const titel = item.nummer
         ? `${escapeHtml(item.nummer)} – ${escapeHtml(item.bezeichnung || '')}`
         : `Unbekannter Code ${escapeHtml(item.code)}`;
       row.innerHTML = `
-        <div class="protocol-card-top"><span class="badge ${badgeClass(ab.key)}">${escapeHtml(ab.key === 'ok' ? 'Passt' : ab.key === 'abweichend' ? 'Abweichend' : ab.key === 'unbekannt' ? 'Unbekannt' : 'Ohne Referenz')}</span></div>
+        <div class="protocol-card-top"><span class="badge ${badgeClass(ab.key)}">${escapeHtml(BADGE_TEXT[ab.key] || 'Ohne Referenz')}</span></div>
         <div class="protocol-card-title">${titel}</div>
         <div class="protocol-card-sub">${escapeHtml(ab.text)}${item.ean ? ' · EAN ' + escapeHtml(item.ean) : ''}</div>
       `;
@@ -259,6 +291,13 @@ export async function renderNewLagerplatzErfassung(container, router) {
     changeInfo.innerHTML = nAend
       ? `📎 <strong>${nAend} Artikel</strong> stehen laut System woanders. Für sie wird zusätzlich eine <strong>SAP-Massenänderungs-Datei</strong> (neuer Hauptlagerplatz ${escapeHtml(platz || '–')}) angehängt.`
       : 'Kein Artikel weicht vom System ab – es wird nur der Erfassungsbericht gesendet.';
+    const refItems = items.filter((i) => abgleich(i, platz).key === 'referenz');
+    refWarn.style.display = refItems.length ? 'block' : 'none';
+    refWarn.innerHTML = refItems.length
+      ? `⚠️ <strong>${refItems.length} Artikel</strong> haben ${escapeHtml(platz || 'diesen Lagerplatz')} bereits als <strong>Referenzlagerplatz</strong> eingetragen ` +
+        `(${refItems.map((i) => escapeHtml(i.nummer)).join(', ')}). Mit dieser Funktion lassen sich nur Hauptlagerplätze ändern – ` +
+        'diese Artikel kommen nicht in die SAP-Datei und müssen ggf. einzeln geklärt werden.'
+      : '';
     sendBtn.textContent = items.length ? `📤 ${items.length} Artikel für Lagerplatz senden` : 'Noch nichts erfasst';
     sendBtn.disabled = !items.length;
   }
@@ -305,8 +344,10 @@ export async function renderNewLagerplatzErfassung(container, router) {
   lagerplatz.input.focus();
 }
 
+const BADGE_TEXT = { ok: 'Passt', referenz: 'Warnung: Referenzplatz', abweichend: 'Abweichend', unbekannt: 'Unbekannt', ohne: 'Ohne Referenz' };
+
 function badgeClass(key) {
-  return key === 'ok' ? 'badge-fertig' : key === 'abweichend' || key === 'unbekannt' ? 'badge-verschrottung' : 'badge-lager';
+  return key === 'ok' ? 'badge-fertig' : key === 'abweichend' || key === 'unbekannt' || key === 'referenz' ? 'badge-verschrottung' : 'badge-lager';
 }
 
 function escapeHtml(s) {

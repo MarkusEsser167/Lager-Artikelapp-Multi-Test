@@ -358,3 +358,8 @@ h3 { margin: 0; }
 .multi-chip.unknown { border-left-color: #f1c40f; }
 .multi-hint { font-size: 0.75rem; opacity: 0.7; margin-top: 8px; }
 .candidate-select { width: 100%; margin-top: 4px; }
+
+/* Lagerplatz-Erfassung: Warnung Referenzlagerplatz */
+.multi-chip.warn { border-left-color: #e74c3c; background: #3b1d1a; font-weight: 600; }
+.multi-warn { background: #c0392b; color: #fff; font-weight: 700; font-size: 0.9rem; padding: 7px 10px; border-radius: 6px; margin-bottom: 6px; }
+.protocol-card.row-warn { border-left: 5px solid var(--danger); background: var(--danger-bg); }

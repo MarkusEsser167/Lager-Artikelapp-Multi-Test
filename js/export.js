@@ -201,8 +201,9 @@ export async function sendLagerplatzerfassung(m) {
   const filename = `Lagerplatz-Erfassung_${safePlatz}_${m.id}.xlsx`;
   const n = rows.length;
   const abweichend = (m.items || []).filter((i) => i.abgleich && (i.abgleich.key === 'abweichend' || i.abgleich.key === 'unbekannt')).length;
+  const referenz = (m.items || []).filter((i) => i.abgleich && i.abgleich.key === 'referenz');
   const subject = `Lagerplatz-Erfassung ${m.lagerplatz || ''} – ${n} Artikel`;
-  let message = `Lagerplatz-Erfassung von ${m.melder || '–'}.\nLagerplatz: ${m.lagerplatz || '–'}\nErfasste Artikel: ${n}${abweichend ? `\nDavon abweichend/unbekannt: ${abweichend}` : ''}\nHinweis: Es wird erfasst, welche Artikel auf dem Platz stehen, nicht die Menge.`;
+  let message = `Lagerplatz-Erfassung von ${m.melder || '–'}.\nLagerplatz: ${m.lagerplatz || '–'}\nErfasste Artikel: ${n}${abweichend ? `\nDavon abweichend/unbekannt: ${abweichend}` : ''}${referenz.length ? `\nACHTUNG – Lagerplatz bereits Referenzlagerplatz (nicht per Massenänderung änderbar, nicht in SAP-Datei): ${referenz.map((i) => i.nummer).join(', ')}` : ''}\nHinweis: Es wird erfasst, welche Artikel auf dem Platz stehen, nicht die Menge.`;
 
   // Zweiter Anhang im Format der Massen-Lagerplatzkorrektur (SAP-Massenupload, siehe
   // sendLagerplatzkorrekturBatch): nur Artikel, die laut System NICHT auf diesem Lagerplatz

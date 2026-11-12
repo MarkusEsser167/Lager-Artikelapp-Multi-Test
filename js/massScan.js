@@ -13,8 +13,9 @@ export function isMultiScanSupported() {
   return 'BarcodeDetector' in window && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 }
 
-// lookup(rawValue) -> { label, known } | null : liefert die Anzeige für einen erfassten Code
-// (z.B. Artikelnummer + Bezeichnung), damit man im Overlay sofort sieht, was erkannt wurde.
+// lookup(rawValue) -> { label, known, warn, short } | null : liefert die Anzeige für einen erfassten
+// Code (z.B. Artikelnummer + Bezeichnung), damit man im Overlay sofort sieht, was erkannt wurde.
+// warn = true markiert den Code rot und listet ihn dauerhaft als Warnung (short = Kurzname).
 // initial: bereits erfasste Rohwerte (werden mitgezählt und nicht doppelt gemeldet).
 // onCapture(rawValue): wird einmal je neu erkanntem Code aufgerufen; gibt es false zurück, wird der
 // Code nicht mitgezählt (grau markiert), z.B. bei einem Lagerplatz-Etikett oder bereits erfasstem Artikel.
@@ -49,9 +50,10 @@ export function startMultiScan({ title = 'Mehrfach-Scan', lookup = () => null, i
       </div>
       <div class="multi-panel">
         <div class="multi-count"></div>
+        <div class="multi-warn" hidden></div>
         <div class="multi-latest"></div>
         <div class="multi-hint">Kamera ruhig über die Ware halten – alle sichtbaren Barcodes werden erfasst.
-          Grün = erfasst, gelb = wird geprüft, grau = ignoriert.</div>
+          Grün = erfasst, rot = erfasst mit Warnung, gelb = wird geprüft, grau = ignoriert.</div>
       </div>
     `;
     document.body.appendChild(overlay);
@@ -60,6 +62,7 @@ export function startMultiScan({ title = 'Mehrfach-Scan', lookup = () => null, i
     const ctx = canvas.getContext('2d');
     const countEl = overlay.querySelector('.multi-count');
     const latestEl = overlay.querySelector('.multi-latest');
+    const warnEl = overlay.querySelector('.multi-warn');
 
     function renderPanel() {
       countEl.textContent = `${captured.length} Code${captured.length === 1 ? '' : 's'} erfasst`;
@@ -67,10 +70,16 @@ export function startMultiScan({ title = 'Mehrfach-Scan', lookup = () => null, i
       captured.slice(-4).reverse().forEach((raw) => {
         const info = lookup(raw);
         const chip = document.createElement('div');
-        chip.className = 'multi-chip' + (info && info.known ? ' known' : ' unknown');
+        chip.className = 'multi-chip' + (info && info.warn ? ' warn' : info && info.known ? ' known' : ' unknown');
         chip.textContent = info && info.label ? info.label : `Unbekannter Code ${raw}`;
         latestEl.appendChild(chip);
       });
+      // Warnungen bleiben dauerhaft sichtbar (die Chip-Liste zeigt nur die letzten 4 Codes).
+      const warnungen = captured.map((raw) => lookup(raw)).filter((info) => info && info.warn);
+      warnEl.hidden = !warnungen.length;
+      warnEl.textContent = warnungen.length
+        ? `⚠️ ${warnungen.length} Artikel: Lagerplatz ist bereits Referenzlagerplatz – ${warnungen.map((w) => w.short || w.label).join(', ')}`
+        : '';
     }
     renderPanel();
 
@@ -130,9 +139,11 @@ export function startMultiScan({ title = 'Mehrfach-Scan', lookup = () => null, i
       codes.forEach((c) => {
         const accepted = capturedSet.has(c.rawValue);
         const ignored = ignoredSet.has(c.rawValue);
+        const info = accepted ? lookup(c.rawValue) : null;
+        const warn = !!(info && info.warn);
         ctx.lineWidth = 4;
-        ctx.strokeStyle = ignored ? '#95a5a6' : accepted ? '#2ecc71' : '#f1c40f';
-        ctx.fillStyle = ignored ? 'rgba(149,165,166,0.2)' : accepted ? 'rgba(46,204,113,0.25)' : 'rgba(241,196,15,0.2)';
+        ctx.strokeStyle = ignored ? '#95a5a6' : warn ? '#e74c3c' : accepted ? '#2ecc71' : '#f1c40f';
+        ctx.fillStyle = ignored ? 'rgba(149,165,166,0.2)' : warn ? 'rgba(231,76,60,0.3)' : accepted ? 'rgba(46,204,113,0.25)' : 'rgba(241,196,15,0.2)';
         const pts = c.cornerPoints && c.cornerPoints.length ? c.cornerPoints : null;
         ctx.beginPath();
         if (pts) {
@@ -157,6 +168,7 @@ export function startMultiScan({ title = 'Mehrfach-Scan', lookup = () => null, i
         if (video.readyState >= 2) {
           const codes = (await detector.detect(video)) || [];
           let added = false;
+          let warned = false;
           codes.forEach((c) => {
             const raw = c.rawValue;
             if (!raw || capturedSet.has(raw) || ignoredSet.has(raw)) return;
@@ -169,12 +181,15 @@ export function startMultiScan({ title = 'Mehrfach-Scan', lookup = () => null, i
                 capturedSet.add(raw);
                 captured.push(raw);
                 added = true;
+                const info = lookup(raw);
+                if (info && info.warn) warned = true;
               }
             }
           });
           drawBoxes(codes);
           if (added) {
-            if (navigator.vibrate) navigator.vibrate(60);
+            // Warnung: deutlich längeres Doppel-Vibrieren statt kurzem Tick.
+            if (navigator.vibrate) navigator.vibrate(warned ? [250, 120, 250] : 60);
             renderPanel();
           }
         }

@@ -144,7 +144,9 @@ function groupArtikelLagerplatz(rows) {
     const sorted = [...locations].sort((a, b) => Number(b.haupt) - Number(a.haupt));
     const lagerplatz =
       sorted.length > 1 ? sorted.map((l) => (l.haupt ? `${l.code} (Haupt)` : l.code)).join(', ') : sorted[0]?.code || '';
-    return { nummer, bezeichnung, ean, lagerplatz };
+    // locations: strukturiert (Code + Haupt-Kennzeichen), z.B. für die Prüfung, ob ein Platz
+    // nur als Referenzlagerplatz hinterlegt ist (Lagerplatz-Erfassung).
+    return { nummer, bezeichnung, ean, lagerplatz, locations: sorted };
   });
 }
 
