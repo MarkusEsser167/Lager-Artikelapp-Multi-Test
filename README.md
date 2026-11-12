@@ -65,7 +65,7 @@ Geräte-/Komfort-Einstellung ohne Anmeldung dahinter**:
 ## Referenzdaten (Excel-Dateien im Repo)
 
 - `data/artikelliste.xlsx` – **standortübergreifend geteilt**: unternehmensweiter Artikelstamm
-  (SAP-Exportformat, Spalte `Material` + beliebig viele Text-Spalten), ca. 153.000 Artikel.
+  (SAP-Exportformat, Spalte `Material` + beliebig viele Text-Spalten, optional `EAN` als Text für Suche/Scan), ca. 153.000 Artikel, davon ca. 98.700 mit EAN.
 - `data/standorte.xlsx` – Standort-Registry, siehe oben. Pflichtspalten: `Code`, `Name`,
   `Zentrale Mailadresse`, `Verschrottung Mailadresse(n)`, `SAP Werk`, `SAP Lagerort`.
 - `data/<Code>/lagerplatzliste.xlsx` – Vorschlagsliste der Lagerplätze dieses Standorts (Spalte
