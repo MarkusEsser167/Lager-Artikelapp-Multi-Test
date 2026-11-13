@@ -175,21 +175,36 @@ export async function sendLagerplatzkorrekturBatch(meldungen) {
   return { method: 'download' };
 }
 
-// Massenerfassung pro Lagerplatz: eine Excel-Datei mit einer Zeile je erfasstem Artikel/Code
-// (Lagerplatz, Artikelnummer, Bezeichnung, EAN/Code, Abgleich mit dem System) an die zentrale
-// Adresse des Standorts. Unbekannte Codes werden mit aufgeführt, damit nichts verloren geht.
+// Lagerplatz-Erfassung: EINE Mail für eine ganze Erfassungsrunde (ein oder mehrere Lagerplätze).
+// Ältere Meldungen (vor v1.4.0) haben nur m.lagerplatz + m.items – werden als ein Platz behandelt.
 export async function sendLagerplatzerfassung(m) {
   const standort = await requireStandort();
+  const plaetze = (m.plaetze && m.plaetze.length) ? m.plaetze : [{ lagerplatz: m.lagerplatz || '', items: m.items || [] }];
+  const alleItems = plaetze.flatMap((p) => (p.items || []).map((i) => ({ ...i, platz: p.lagerplatz || '' })));
+
+  // Artikel, die in dieser Runde auf MEHREREN Lagerplätzen erfasst wurden: ein Artikel hat nur
+  // einen Hauptlagerplatz – welcher richtig ist, muss geklärt werden. Deshalb nicht in die SAP-Datei.
+  const plaetzeJeNummer = new Map();
+  alleItems.forEach((i) => {
+    if (!i.nummer) return;
+    if (!plaetzeJeNummer.has(i.nummer)) plaetzeJeNummer.set(i.nummer, new Set());
+    plaetzeJeNummer.get(i.nummer).add(i.platz);
+  });
+  const mehrfach = (nummer) => nummer && plaetzeJeNummer.has(nummer) && plaetzeJeNummer.get(nummer).size > 1;
+
   const wb = window.XLSX.utils.book_new();
-  const rows = (m.items || []).map((i) => ({
+  const rows = alleItems.map((i) => ({
     Datum: formatDate(m.createdAt),
     Standort: standort.name,
-    Lagerplatz: m.lagerplatz || '',
+    Lagerplatz: i.platz,
     Artikelnummer: i.nummer || '',
     Artikelbezeichnung: i.bezeichnung || '',
     'EAN / gescannter Code': i.ean || i.code || '',
     'Lagerplatz laut System': (i.abgleich && i.abgleich.system) || '',
     Abgleich: (i.abgleich && i.abgleich.text) || '',
+    Hinweis: mehrfach(i.nummer)
+      ? `In dieser Erfassung auf mehreren Plätzen: ${[...plaetzeJeNummer.get(i.nummer)].join(', ')} – nicht in SAP-Datei`
+      : '',
     'Gemeldet von': m.melder || '',
   }));
   const ws = window.XLSX.utils.json_to_sheet(rows);
@@ -197,19 +212,42 @@ export async function sendLagerplatzerfassung(m) {
   const arrayBuffer = window.XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   const blob = new Blob([arrayBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
-  const safePlatz = (m.lagerplatz || 'lagerplatz').replace(/[^a-zA-Z0-9_-]+/g, '_');
-  const filename = `Lagerplatz-Erfassung_${safePlatz}_${m.id}.xlsx`;
+  const einPlatz = plaetze.length === 1;
+  const safeName = einPlatz
+    ? (plaetze[0].lagerplatz || 'lagerplatz').replace(/[^a-zA-Z0-9_-]+/g, '_')
+    : `${plaetze.length}-Lagerplaetze`;
+  const filename = `Lagerplatz-Erfassung_${safeName}_${m.id}.xlsx`;
   const n = rows.length;
-  const abweichend = (m.items || []).filter((i) => i.abgleich && (i.abgleich.key === 'abweichend' || i.abgleich.key === 'unbekannt')).length;
-  const referenz = (m.items || []).filter((i) => i.abgleich && i.abgleich.key === 'referenz');
-  const subject = `Lagerplatz-Erfassung ${m.lagerplatz || ''} – ${n} Artikel`;
-  let message = `Lagerplatz-Erfassung von ${m.melder || '–'}.\nLagerplatz: ${m.lagerplatz || '–'}\nErfasste Artikel: ${n}${abweichend ? `\nDavon abweichend/unbekannt: ${abweichend}` : ''}${referenz.length ? `\nACHTUNG – Lagerplatz bereits Referenzlagerplatz (nicht per Massenänderung änderbar, nicht in SAP-Datei): ${referenz.map((i) => i.nummer).join(', ')}` : ''}\nHinweis: Es wird erfasst, welche Artikel auf dem Platz stehen, nicht die Menge.`;
+  const subject = einPlatz
+    ? `Lagerplatz-Erfassung ${plaetze[0].lagerplatz || ''} – ${n} Artikel`
+    : `Lagerplatz-Erfassung – ${plaetze.length} Lagerplätze, ${n} Artikel`;
+
+  const zeilen = plaetze.map((p) => {
+    const its = p.items || [];
+    const abw = its.filter((i) => i.abgleich && (i.abgleich.key === 'abweichend' || i.abgleich.key === 'unbekannt')).length;
+    const ref = its.filter((i) => i.abgleich && i.abgleich.key === 'referenz').length;
+    return `- ${p.lagerplatz || '–'}: ${its.length} Artikel${abw ? `, ${abw} abweichend/unbekannt` : ''}${ref ? `, ${ref} Referenzplatz` : ''}`;
+  });
+  const referenz = alleItems.filter((i) => i.abgleich && i.abgleich.key === 'referenz');
+  const mehrfachNummern = [...plaetzeJeNummer.entries()].filter(([, s]) => s.size > 1);
+  let message = `Lagerplatz-Erfassung von ${m.melder || '–'}.\n` +
+    `Lagerplätze: ${plaetze.length} · Erfasste Artikel: ${n}\n${zeilen.join('\n')}`;
+  if (referenz.length) {
+    message += `\n\nACHTUNG – Lagerplatz bereits Referenzlagerplatz (nicht per Massenänderung änderbar, nicht in SAP-Datei): ` +
+      referenz.map((i) => `${i.nummer} (${i.platz})`).join(', ');
+  }
+  if (mehrfachNummern.length) {
+    message += `\n\nBITTE KLÄREN – auf mehreren Lagerplätzen erfasst (nicht in SAP-Datei): ` +
+      mehrfachNummern.map(([nr, s]) => `${nr} (${[...s].join(' / ')})`).join(', ');
+  }
+  message += '\n\nHinweis: Es wird erfasst, welche Artikel auf dem Platz stehen, nicht die Menge.';
 
   // Zweiter Anhang im Format der Massen-Lagerplatzkorrektur (SAP-Massenupload, siehe
-  // sendLagerplatzkorrekturBatch): nur Artikel, die laut System NICHT auf diesem Lagerplatz
-  // stehen. Neuer Hauptlagerplatz (LGPBE) = der erfasste Lagerplatz. Artikel ohne hinterlegten
-  // Systemplatz und unbekannte Codes gehören bewusst nicht hinein (nur im Erfassungsbericht).
-  const aenderungen = (m.items || []).filter((i) => i.nummer && i.abgleich && i.abgleich.key === 'abweichend');
+  // sendLagerplatzkorrekturBatch): nur Artikel, die laut System NICHT auf dem erfassten Lagerplatz
+  // stehen. Neuer Hauptlagerplatz (LGPBE) = der jeweils erfasste Lagerplatz. Artikel ohne
+  // hinterlegten Systemplatz, unbekannte Codes, Referenzplätze und mehrfach erfasste Artikel
+  // gehören bewusst nicht hinein (nur im Erfassungsbericht).
+  const aenderungen = alleItems.filter((i) => i.nummer && i.abgleich && i.abgleich.key === 'abweichend' && !mehrfach(i.nummer));
   const extraAttachments = [];
   const extraFiles = [];
   if (aenderungen.length) {
@@ -218,16 +256,16 @@ export async function sendLagerplatzerfassung(m) {
       MATNR: i.nummer,
       WERKS: standort.sapWerk,
       LGORT: standort.sapLgort,
-      LGPBE: m.lagerplatz || '',
+      LGPBE: i.platz,
     }));
     window.XLSX.utils.book_append_sheet(sapWb, window.XLSX.utils.json_to_sheet(sapRows), 'Tabelle1');
     const sapBuffer = window.XLSX.write(sapWb, { bookType: 'xlsx', type: 'array' });
-    const sapFilename = `Lagerplatzkorrektur_${safePlatz}_${m.id}.xlsx`;
+    const sapFilename = `Lagerplatzkorrektur_${safeName}_${m.id}.xlsx`;
     extraAttachments.push({ filename: sapFilename, mimeType: blob.type, arrayBuffer: sapBuffer });
     extraFiles.push({ filename: sapFilename, blob: new Blob([sapBuffer], { type: blob.type }) });
-    message += `\n\nAnhang 2 (SAP-Massenänderung): ${aenderungen.length} Artikel mit neuem Hauptlagerplatz ${m.lagerplatz || '–'}.`;
+    message += `\n\nAnhang 2 (SAP-Massenänderung): ${aenderungen.length} Artikel mit neuem Hauptlagerplatz (jeweils der erfasste Platz).`;
   } else {
-    message += '\n\nKeine Lagerplatzänderungen nötig (kein Artikel weicht vom System ab).';
+    message += '\n\nKeine Lagerplatzänderungen nötig (kein Artikel weicht eindeutig vom System ab).';
   }
 
   if (MAIL_SCRIPT_URL) {

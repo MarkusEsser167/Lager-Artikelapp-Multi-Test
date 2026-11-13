@@ -68,6 +68,9 @@ export async function renderHome(container, router) {
   container.appendChild(actions);
 
   const meldungen = await MeldungStore.listMeldungen();
+  if (meldungen.some((m) => m.type === 'lagerplatzerfassung' && m.status === 'entwurf')) {
+    erfassungBtn.innerHTML = '📷<br>Lagerplatz-Erfassung fortsetzen';
+  }
 
   const list = document.createElement('div');
   list.className = 'protocol-list';
@@ -122,6 +125,7 @@ const STATUS_LABEL = {
   gesendet: { text: 'Automatisch gesendet', cls: 'badge-fertig' },
   manuell: { text: 'Manueller Versand nötig', cls: 'badge-verschrottung' },
   offen: { text: 'Nicht gesendet', cls: 'badge-verschrottung' },
+  entwurf: { text: 'In Arbeit – noch nicht gesendet', cls: 'badge-lager' },
 };
 
 function meldungCard(m, container, router) {
@@ -129,14 +133,14 @@ function meldungCard(m, container, router) {
   const status = STATUS_LABEL[m.status] || STATUS_LABEL.offen;
   const card = document.createElement('div');
   card.className = 'protocol-card';
-  const title = m.type === 'lagerplatzerfassung' ? `Lagerplatz ${m.lagerplatz || '–'}` : m.artikelnummer || '(keine Artikelnummer)';
+  const title = m.type === 'lagerplatzerfassung' ? erfassungTitel(m) : m.artikelnummer || '(keine Artikelnummer)';
   const sub =
     m.type === 'lagerplatz'
       ? `Neuer ${m.lagerplatzArt || 'Lagerplatz'}: ${m.neuLagerplatz || '–'}`
       : m.type === 'lagerplatzkorrektur'
         ? `Hauptlagerplatz: ${m.bisherigerLagerplatz || '–'} → ${m.neuerLagerplatz || '–'}`
         : m.type === 'lagerplatzerfassung'
-          ? `${(m.items || []).length} Artikel erfasst`
+          ? `${erfassungArtikel(m)} Artikel erfasst`
         : m.type === 'fehlbestand'
           ? (m.bemerkung || 'Fehlbestand')
           : `${m.grund || '–'}${m.menge ? ' · ' + m.menge + ' Stk.' : ''}`;
@@ -151,7 +155,16 @@ function meldungCard(m, container, router) {
   const actions = document.createElement('div');
   actions.className = 'card-actions';
 
-  if (m.status !== 'gesendet') {
+  if (m.status === 'entwurf') {
+    const contBtn = document.createElement('button');
+    contBtn.className = 'btn btn-primary btn-sm';
+    contBtn.textContent = 'Fortsetzen';
+    contBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      router.navigate('lagerplatz-erfassung');
+    });
+    actions.appendChild(contBtn);
+  } else if (m.status !== 'gesendet') {
     const retryBtn = document.createElement('button');
     retryBtn.className = 'btn btn-ghost btn-sm';
     retryBtn.textContent = 'Erneut senden';
@@ -180,7 +193,10 @@ function meldungCard(m, container, router) {
   delBtn.textContent = 'Löschen';
   delBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
-    if (confirm('Diese Meldung wirklich löschen?')) {
+    const frage = m.status === 'entwurf'
+      ? 'Diese begonnene Lagerplatz-Erfassung (noch nicht gesendet) wirklich löschen?'
+      : 'Diese Meldung wirklich löschen?';
+    if (confirm(frage)) {
       await MeldungStore.deleteMeldung(m.id);
       await renderHome(container, router);
     }
@@ -188,6 +204,26 @@ function meldungCard(m, container, router) {
   actions.appendChild(delBtn);
   card.appendChild(actions);
   return card;
+}
+
+// Lagerplatz-Erfassung: seit v1.4.0 mehrere Lagerplätze je Meldung (m.plaetze), vorher einer.
+function erfassungPlaetze(m) {
+  if (m.plaetze && m.plaetze.length) return m.plaetze.map((p) => p.lagerplatz);
+  return m.lagerplatz ? [m.lagerplatz] : [];
+}
+function erfassungTitel(m) {
+  const p = erfassungPlaetze(m);
+  if (m.status === 'entwurf' && m.aktuell && m.aktuell.lagerplatz && m.aktuell.items && m.aktuell.items.length) p.push(m.aktuell.lagerplatz);
+  if (!p.length) return 'Lagerplatz –';
+  return p.length === 1 ? `Lagerplatz ${p[0]}` : `${p.length} Lagerplätze: ${p.join(', ')}`;
+}
+function erfassungArtikel(m) {
+  if (m.plaetze && m.plaetze.length) {
+    const n = m.plaetze.reduce((s, p) => s + (p.items || []).length, 0);
+    return n + (m.status === 'entwurf' && m.aktuell ? (m.aktuell.items || []).length : 0);
+  }
+  if (m.status === 'entwurf' && m.aktuell) return (m.aktuell.items || []).length;
+  return (m.items || []).length;
 }
 
 function formatDate(iso) {

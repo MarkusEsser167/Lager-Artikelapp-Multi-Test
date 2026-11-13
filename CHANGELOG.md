@@ -4,6 +4,14 @@
 
 Gilt für alle Standort-Apps (106, 812, 872, 120). Die Versionsnummer steht oben im Header der App.
 
+## 1.4.0 – 13.11.2026
+- **Neu:** In der Lagerplatz-Erfassung werden **mehrere Lagerplätze gesammelt** und am Schluss in **einer Mail** gesendet. Bisher ging pro Lagerplatz eine eigene Mail raus.
+  - Nach jedem Platz auf **„Lagerplatz abschließen – nächsten erfassen"** tippen. Erst **„Alles senden"** verschickt alles zusammen.
+  - Abgeschlossene Lagerplätze stehen oben in einer Liste. Man kann sie dort nachträglich bearbeiten oder wieder entfernen.
+  - Der Zwischenstand wird automatisch auf dem Tablet gespeichert. Wird die App geschlossen, geht die Erfassung beim nächsten Öffnen weiter. Auf der Startseite steht sie solange als „In Arbeit".
+  - Die Mail enthält einen Bericht mit allen Lagerplätzen und eine gemeinsame SAP-Massenänderungs-Datei.
+  - Wurde ein Artikel in derselben Erfassung auf **mehreren Lagerplätzen** gefunden, kommt er nicht in die SAP-Datei. Er steht in der Mail unter „Bitte klären", weil ein Artikel nur einen Hauptlagerplatz haben kann.
+
 ## 1.3.2 – 12.11.2026
 - **Neu:** Warnung in der Lagerplatz-Erfassung, wenn der gescannte Lagerplatz für einen Artikel bereits als **Referenzlagerplatz** eingetragen ist.
   - Im Kamerabild wird der Rahmen rot, das Tablet vibriert länger, und oben steht dauerhaft ein Hinweis mit der Artikelnummer.
