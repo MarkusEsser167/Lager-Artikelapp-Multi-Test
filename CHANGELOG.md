@@ -4,6 +4,11 @@
 
 Gilt für alle Standort-Apps (106, 812, 872, 120). Die Versionsnummer steht oben im Header der App.
 
+## 1.4.1 – 13.11.2026
+- **Neu:** Ein Artikel kann jetzt **mehrere EAN-Codes** haben, zum Beispiel für unterschiedliche Verpackungseinheiten. **Alle gelten:** Jeder davon findet den Artikel in der Suche, beim Scannen und in der Lagerplatz-Erfassung.
+  - Rund 6.550 Artikel haben dadurch zusätzliche EANs bekommen, bis zu 4 je Artikel.
+  - Die Suche zeigt im Treffer die EAN, die gepasst hat. Die Lagerplatz-Erfassung merkt sich die tatsächlich gescannte EAN.
+
 ## 1.4.0 – 13.11.2026
 - **Neu:** In der Lagerplatz-Erfassung werden **mehrere Lagerplätze gesammelt** und am Schluss in **einer Mail** gesendet. Bisher ging pro Lagerplatz eine eigene Mail raus.
   - Nach jedem Platz auf **„Lagerplatz abschließen – nächsten erfassen"** tippen. Erst **„Alles senden"** verschickt alles zusammen.

@@ -1,5 +1,5 @@
 import { MeldungStore, newId, getMelderName, setMelderName } from '../db.js';
-import { scanField, selectField, normEan } from '../formFields.js';
+import { scanField, selectField, normEan, eanList } from '../formFields.js';
 import { loadArtikelListe, loadArtikelLagerplatzListe, loadLagerplatzListe, loadMitarbeiterListe } from '../refData.js';
 import { sendLagerplatzerfassung } from '../export.js';
 import { startMultiScan, isMultiScanSupported } from '../massScan.js';
@@ -58,11 +58,11 @@ export async function renderNewLagerplatzErfassung(container, router) {
   const byEan = new Map();
   artikelListe.forEach((a) => {
     byNummer.set(a.nummer.toLowerCase(), a);
-    const e = normEan(a.ean);
-    if (e) {
+    // Ein Artikel kann mehrere EANs haben (z.B. je Verpackungseinheit) – jede führt zum Artikel.
+    eanList(a.ean).forEach((e) => {
       if (!byEan.has(e)) byEan.set(e, []);
       byEan.get(e).push(a);
-    }
+    });
   });
   const systemByNummer = new Map(artikelLagerplatzListe.map((a) => [a.nummer, a]));
   const lagerplatzCodes = new Set(lagerplatzListe.map((l) => l.code.toLowerCase()));
@@ -150,7 +150,8 @@ export async function renderNewLagerplatzErfassung(container, router) {
       code,
       nummer: a.nummer,
       bezeichnung: a.bezeichnung,
-      ean: a.ean || '',
+      // Per EAN erfasst: genau diese EAN merken (ein Artikel kann mehrere haben).
+      ean: a.nummer.toLowerCase() === code.toLowerCase() ? a.ean || '' : code,
       kandidaten: kandidaten.map((k) => ({ nummer: k.nummer, bezeichnung: k.bezeichnung })),
     });
     persist();

@@ -15,9 +15,14 @@ function isEanTerm(t) {
 // Trefferliste aus einer hinterlegten Vorgabeliste (Artikel-/Lagerplatzliste), die
 // beim Tippen oder nach einem Scan gefiltert wird. onSelect wird bei einem Treffer
 // aufgerufen (z.B. um die Artikelbezeichnung automatisch mit einzutragen).
-// Normalisierte EAN eines Eintrags (zwischengespeichert am Objekt; leer, wenn keine hinterlegt).
+// Ein Artikel kann mehrere EANs haben (z.B. je Verpackungs-/Mengeneinheit). In der Artikelliste
+// stehen sie in EINER Zelle, getrennt durch ";" – alle gelten gleichermaßen.
+export function eanList(s) {
+  return String(s || '').split(/[;,|]+/).map(normEan).filter(Boolean);
+}
+// Normalisierte EANs eines Eintrags (zwischengespeichert am Objekt; leer, wenn keine hinterlegt).
 function eanOf(it) {
-  if (it.eanN === undefined) it.eanN = normEan(it.ean);
+  if (it.eanN === undefined) it.eanN = eanList(it.ean);
   return it.eanN;
 }
 
@@ -51,7 +56,9 @@ export function scanField({ id, label, placeholder = '', items = null, valueKey,
       // "Sechskantschraube M8x40" ebenso wie "M8 Schraube verzinkt". Lange Zahlenfolgen
       // (ab 6 Ziffern) werden zusätzlich gegen die EAN des Artikels geprüft.
       const terms = q.split(/\s+/).filter(Boolean);
-      const eanOnly = (it, t) => isEanTerm(t) && eanOf(it).includes(normEan(t));
+      const eanTerms = terms.filter(isEanTerm).map(normEan);
+      const eanHit = (it) => (eanTerms.length ? eanOf(it).find((e) => eanTerms.some((t) => e.includes(t))) : undefined);
+      const eanOnly = (it, t) => isEanTerm(t) && eanOf(it).some((e) => e.includes(normEan(t)));
       const matches = items
         .filter((it) => {
           const haystack = `${it[valueKey]} ${it[labelKey] || ''}`.toLowerCase();
@@ -64,8 +71,9 @@ export function scanField({ id, label, placeholder = '', items = null, valueKey,
         row.className = 'lookup-result-row';
         const text = m[labelKey] ? `${m[valueKey]} – ${m[labelKey]}` : m[valueKey];
         // Wurde über die EAN gefunden, die EAN im Treffer mit anzeigen (sonst wäre unklar, warum er passt).
-        const viaEan = m.ean && terms.some((t) => isEanTerm(t) && eanOf(m).includes(normEan(t)));
-        row.textContent = viaEan ? `${text} · EAN ${m.ean}` : text;
+        // Bei mehreren EANs nur die passende anzeigen.
+        const viaEan = eanHit(m);
+        row.textContent = viaEan ? `${text} · EAN ${viaEan}` : text;
         row.addEventListener('mousedown', (e) => e.preventDefault()); // Klick vor Blur behalten
         row.addEventListener('click', () => {
           input.value = m[valueKey];
@@ -93,10 +101,10 @@ export function scanField({ id, label, placeholder = '', items = null, valueKey,
       if (!eanIndex) {
         eanIndex = new Map();
         items.forEach((it) => {
-          const e = eanOf(it);
-          if (!e) return;
-          if (!eanIndex.has(e)) eanIndex.set(e, []);
-          eanIndex.get(e).push(it);
+          eanOf(it).forEach((e) => {
+            if (!eanIndex.has(e)) eanIndex.set(e, []);
+            eanIndex.get(e).push(it);
+          });
         });
       }
       return eanIndex.get(n) || [];
