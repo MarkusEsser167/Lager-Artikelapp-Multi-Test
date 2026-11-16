@@ -106,6 +106,11 @@ Wie bei den Einzel-Apps über ein Google-Apps-Script-Webhook (`apps-script/Code.
 Bereitstellung wie bei Standort 106 – `js/export.js`, `MAIL_SCRIPT_URL`). Empfänger kommen jetzt
 zur Laufzeit aus `data/standorte.xlsx` statt aus festen Konstanten im Code.
 
+**Barcode-Erkennung auf iPhone/iPad (ab v1.4.2):** Safari (und Firefox, Chrome unter Windows) haben keine eingebaute
+`BarcodeDetector`-API. Dafür sind `vendor/barcode-detector-polyfill.js` (npm `barcode-detector` 3.2.3, MIT) und
+`vendor/zxing_reader.wasm` (zxing-wasm 3.1.6) eingebunden; `vendor/barcode-detector-setup.js` lädt die WASM-Datei lokal statt
+vom CDN. Der Polyfill wird nur aktiv, wenn der Browser selbst keinen `BarcodeDetector` hat.
+
 ## Installation auf einem Tablet
 
 1. Diese App über GitHub Pages öffnen (Chrome auf Android)

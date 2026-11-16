@@ -4,6 +4,11 @@
 
 Gilt für alle Standort-Apps (106, 812, 872, 120, 823). Die Versionsnummer steht oben im Header der App.
 
+## 1.4.2 – 16.11.2026
+- **Behoben:** Auf **iPhone und iPad (Safari)** stand bisher „wird auf diesem Gerät/Browser nicht unterstützt“, und Scannen per Kamera war nicht möglich. Jetzt funktionieren dort der Scan-Knopf in allen Formularen und die Lagerplatz-Erfassung per Kamera.
+  - Dafür ist eine eigene Barcode-Erkennung in die App eingebaut. Sie springt nur ein, wenn der Browser selbst keine mitbringt. Auf den Android-Tablets ändert sich nichts.
+  - Die Erkennung läuft komplett in der App, auch offline. Es wird nichts aus dem Internet nachgeladen.
+
 ## 1.4.1 – 13.11.2026
 - **Neu:** Ein Artikel kann jetzt **mehrere EAN-Codes** haben, zum Beispiel für unterschiedliche Verpackungseinheiten. **Alle gelten:** Jeder davon findet den Artikel in der Suche, beim Scannen und in der Lagerplatz-Erfassung.
   - Rund 6.550 Artikel haben dadurch zusätzliche EANs bekommen, bis zu 4 je Artikel.
