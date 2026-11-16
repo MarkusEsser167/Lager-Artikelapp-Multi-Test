@@ -164,12 +164,16 @@ function meldungCard(m, container, router) {
       router.navigate('lagerplatz-erfassung');
     });
     actions.appendChild(contBtn);
-  } else if (m.status !== 'gesendet') {
+  } else {
+    // Seit v1.4.3 auch für bereits gesendete Meldungen („Nochmal senden“), z.B. wenn eine Mail an
+    // eine falsche Adresse ging – es wird immer an die aktuell hinterlegten Empfänger gesendet.
+    const schonGesendet = m.status === 'gesendet';
     const retryBtn = document.createElement('button');
     retryBtn.className = 'btn btn-ghost btn-sm';
-    retryBtn.textContent = 'Erneut senden';
+    retryBtn.textContent = schonGesendet ? 'Nochmal senden' : 'Erneut senden';
     retryBtn.addEventListener('click', async (e) => {
       e.stopPropagation();
+      if (schonGesendet && !confirm('Diese Meldung wurde bereits gesendet. Nochmal senden?')) return;
       retryBtn.disabled = true;
       retryBtn.textContent = 'Wird gesendet…';
       try {

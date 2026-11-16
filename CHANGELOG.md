@@ -4,6 +4,10 @@
 
 Gilt für alle Standort-Apps (106, 812, 872, 120, 823). Die Versionsnummer steht oben im Header der App.
 
+## 1.4.3 – 16.11.2026
+- **Neu:** Bereits gesendete Meldungen haben jetzt auf der Startseite einen Knopf **„Nochmal senden“**. Nach einer Rückfrage wird die Meldung noch einmal verschickt, und zwar an die aktuell hinterlegten Empfänger. Das hilft z.B., wenn eine Mail an eine falsche oder alte Adresse gegangen ist.
+- **823 Oberhausen:** Die zentrale Mailadresse ist jetzt richtig `vtioberhausen@wego-vti.de` (vorher fälschlich `oberhausen@wego-vti.de`). Verschrottungen gehen weiter an Christian Feld und Magdalen Jeblonski.
+
 ## 1.4.2 – 16.11.2026
 - **Behoben:** Auf **iPhone und iPad (Safari)** stand bisher „wird auf diesem Gerät/Browser nicht unterstützt“, und Scannen per Kamera war nicht möglich. Jetzt funktionieren dort der Scan-Knopf in allen Formularen und die Lagerplatz-Erfassung per Kamera.
   - Dafür ist eine eigene Barcode-Erkennung in die App eingebaut. Sie springt nur ein, wenn der Browser selbst keine mitbringt. Auf den Android-Tablets ändert sich nichts.
