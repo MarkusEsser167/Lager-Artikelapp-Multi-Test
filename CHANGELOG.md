@@ -2,7 +2,7 @@
 
 > **Multi-Standort-Testversion** (seit 18.09.2026): ein Repo für alle Standorte, Standort wird pro Gerät gewählt (keine Zugriffskontrolle). Funktionsstand wie unten beschrieben; Empfänger, Werk und Lagerort kommen aus `data/standorte.xlsx`.
 
-Gilt für alle Standort-Apps (106, 812, 872, 120). Die Versionsnummer steht oben im Header der App.
+Gilt für alle Standort-Apps (106, 812, 872, 120, 823). Die Versionsnummer steht oben im Header der App.
 
 ## 1.4.1 – 13.11.2026
 - **Neu:** Ein Artikel kann jetzt **mehrere EAN-Codes** haben, zum Beispiel für unterschiedliche Verpackungseinheiten. **Alle gelten:** Jeder davon findet den Artikel in der Suche, beim Scannen und in der Lagerplatz-Erfassung.
@@ -65,5 +65,6 @@ Gilt für alle Standort-Apps (106, 812, 872, 120). Die Versionsnummer steht oben
 | 812 | 02.09.2026 |
 | 872 | 18.09.2026 |
 | 120 Westerkappeln | 04.11.2026 |
+| 823 Oberhausen | 16.11.2026 |
 
 Seitdem werden Listen laufend aktualisiert, zum Beispiel Mitarbeiter (106: 15 neue Kollegen am 11.09.) und Lagerplätze (106: Abgleich mit der Gesamtliste am 11.11.).
