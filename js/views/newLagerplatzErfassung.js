@@ -459,9 +459,13 @@ export async function renderNewLagerplatzErfassung(container, router) {
       list.appendChild(row);
     });
     const nAend = items.filter((i) => abgleich(i, platz).key === 'abweichend').length;
+    const nOhne = items.filter((i) => abgleich(i, platz).key === 'ohne').length;
+    const teile = [];
+    if (nAend) teile.push(`<strong>${nAend} Artikel</strong> stehen laut System woanders`);
+    if (nOhne) teile.push(`<strong>${nOhne} Artikel</strong> haben im System noch keinen Lagerplatz`);
     changeInfo.style.display = items.length ? 'block' : 'none';
-    changeInfo.innerHTML = nAend
-      ? `📎 <strong>${nAend} Artikel</strong> stehen laut System woanders. Sie kommen in die <strong>SAP-Massenänderungs-Datei</strong> (neuer Hauptlagerplatz ${escapeHtml(platz || '–')}).`
+    changeInfo.innerHTML = teile.length
+      ? `📎 ${teile.join(', ')}. Sie kommen in die <strong>SAP-Massenänderungs-Datei</strong> (neuer Hauptlagerplatz ${escapeHtml(platz || '–')}).`
       : 'Kein Artikel auf diesem Lagerplatz weicht vom System ab.';
     const refItems = items.filter((i) => abgleich(i, platz).key === 'referenz');
     refWarn.style.display = refItems.length ? 'block' : 'none';

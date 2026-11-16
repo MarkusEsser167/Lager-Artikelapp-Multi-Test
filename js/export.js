@@ -243,11 +243,13 @@ export async function sendLagerplatzerfassung(m) {
   message += '\n\nHinweis: Es wird erfasst, welche Artikel auf dem Platz stehen, nicht die Menge.';
 
   // Zweiter Anhang im Format der Massen-Lagerplatzkorrektur (SAP-Massenupload, siehe
-  // sendLagerplatzkorrekturBatch): nur Artikel, die laut System NICHT auf dem erfassten Lagerplatz
-  // stehen. Neuer Hauptlagerplatz (LGPBE) = der jeweils erfasste Lagerplatz. Artikel ohne
-  // hinterlegten Systemplatz, unbekannte Codes, Referenzplätze und mehrfach erfasste Artikel
-  // gehören bewusst nicht hinein (nur im Erfassungsbericht).
-  const aenderungen = alleItems.filter((i) => i.nummer && i.abgleich && i.abgleich.key === 'abweichend' && !mehrfach(i.nummer));
+  // sendLagerplatzkorrekturBatch): Artikel, die laut System NICHT auf dem erfassten Lagerplatz
+  // stehen, und (seit v1.4.4) Artikel, für die im System noch gar kein Lagerplatz hinterlegt ist.
+  // Neuer Hauptlagerplatz (LGPBE) = der jeweils erfasste Lagerplatz. Unbekannte Codes,
+  // Referenzplätze und mehrfach erfasste Artikel gehören bewusst nicht hinein (nur im Erfassungsbericht).
+  const aenderungen = alleItems.filter((i) => i.nummer && i.abgleich &&
+    (i.abgleich.key === 'abweichend' || i.abgleich.key === 'ohne') && !mehrfach(i.nummer));
+  const nOhne = aenderungen.filter((i) => i.abgleich.key === 'ohne').length;
   const extraAttachments = [];
   const extraFiles = [];
   if (aenderungen.length) {
@@ -263,9 +265,10 @@ export async function sendLagerplatzerfassung(m) {
     const sapFilename = `Lagerplatzkorrektur_${safeName}_${m.id}.xlsx`;
     extraAttachments.push({ filename: sapFilename, mimeType: blob.type, arrayBuffer: sapBuffer });
     extraFiles.push({ filename: sapFilename, blob: new Blob([sapBuffer], { type: blob.type }) });
-    message += `\n\nAnhang 2 (SAP-Massenänderung): ${aenderungen.length} Artikel mit neuem Hauptlagerplatz (jeweils der erfasste Platz).`;
+    message += `\n\nAnhang 2 (SAP-Massenänderung): ${aenderungen.length} Artikel mit neuem Hauptlagerplatz (jeweils der erfasste Platz)` +
+      (nOhne ? `, davon ${nOhne} bisher ohne Lagerplatz im System.` : '.');
   } else {
-    message += '\n\nKeine Lagerplatzänderungen nötig (kein Artikel weicht eindeutig vom System ab).';
+    message += '\n\nKeine Lagerplatzänderungen nötig (kein Artikel weicht eindeutig vom System ab oder ist ohne Lagerplatz).';
   }
 
   if (MAIL_SCRIPT_URL) {

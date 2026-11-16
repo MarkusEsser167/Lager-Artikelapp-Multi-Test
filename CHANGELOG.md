@@ -4,6 +4,11 @@
 
 Gilt für alle Standort-Apps (106, 812, 872, 120, 823). Die Versionsnummer steht oben im Header der App.
 
+## 1.4.4 – 16.11.2026
+- **Behoben:** In der **Lagerplatz-Erfassung (Kamera)** kamen Artikel, für die im System noch **kein Lagerplatz** hinterlegt war („Ohne Referenz“), nicht in die zweite Excel-Datei (SAP-Massenänderung). Jetzt sind sie dort mit dem erfassten Lagerplatz als neuem Hauptlagerplatz enthalten.
+  - Der Hinweis auf der Seite und die Mail nennen, wie viele dieser Artikel bisher keinen Lagerplatz hatten.
+  - Unbekannte Codes, Referenzlagerplätze und auf mehreren Plätzen erfasste Artikel bleiben wie bisher draußen.
+
 ## 1.4.3 – 16.11.2026
 - **Neu:** Bereits gesendete Meldungen haben jetzt auf der Startseite einen Knopf **„Nochmal senden“**. Nach einer Rückfrage wird die Meldung noch einmal verschickt, und zwar an die aktuell hinterlegten Empfänger. Das hilft z.B., wenn eine Mail an eine falsche oder alte Adresse gegangen ist.
 - **823 Oberhausen:** Die zentrale Mailadresse ist jetzt richtig `vtioberhausen@wego-vti.de` (vorher fälschlich `oberhausen@wego-vti.de`). Verschrottungen gehen weiter an Christian Feld und Magdalen Jeblonski.
