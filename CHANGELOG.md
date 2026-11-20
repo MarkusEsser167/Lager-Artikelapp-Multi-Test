@@ -4,6 +4,11 @@
 
 Gilt für alle Standort-Apps (106, 812, 872, 120, 823). Die Versionsnummer steht oben im Header der App.
 
+## 1.4.5 – 20.11.2026
+- **Neue Artikelliste:** Die Artikelliste stammt jetzt aus dem aktuellen SAP-Materialstamm (MARA, Stand 20.11.2026) und umfasst rund **94.600 Artikel** statt bisher 153.000. Alte und nicht mehr geführte Artikel sind entfallen.
+  - Artikel, die an einem Standort laut Lagerplatzliste noch auf einem Lagerplatz stehen, bleiben trotzdem in der Liste.
+  - Alle bisher bekannten EANs wurden übernommen, auch mehrere EANs je Artikel. Rund 61.900 Artikel haben mindestens eine EAN.
+
 ## 1.4.4 – 16.11.2026
 - **Behoben:** In der **Lagerplatz-Erfassung (Kamera)** kamen Artikel, für die im System noch **kein Lagerplatz** hinterlegt war („Ohne Referenz“), nicht in die zweite Excel-Datei (SAP-Massenänderung). Jetzt sind sie dort mit dem erfassten Lagerplatz als neuem Hauptlagerplatz enthalten.
   - Der Hinweis auf der Seite und die Mail nennen, wie viele dieser Artikel bisher keinen Lagerplatz hatten.
